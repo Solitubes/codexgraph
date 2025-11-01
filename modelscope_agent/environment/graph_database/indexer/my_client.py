@@ -448,27 +448,27 @@ class AstVisitorClient:
             if not method_code:
                 print(f"警告: {full_name} 没有代码内容")
                 return ""
-            
             # 获取方法名称和类名
             method_name = data.get('name', full_name.split('.')[-1])
             class_name = data.get('class', '')
             file_path = data.get('file_path', '')
-            
+            # 新增：获取方法节点所有邻接关系
+            relations = self.graphDB.get_node_relations(full_name)
             print(f"正在为 {full_name} 生成描述...")
             print(f"  方法名: {method_name}")
             print(f"  类名: {class_name}")
             print(f"  文件路径: {file_path}")
             print(f"  代码长度: {len(method_code)} 字符")
-            
+            print(f"  关系信息: {relations}")
             # 使用描述生成器生成描述
             description_generator = get_description_generator()
             description = description_generator.generate_method_description(
                 method_code=method_code,
                 method_name=method_name,
                 class_name=class_name,
-                file_path=file_path
+                file_path=file_path,
+                relations=relations
             )
-            
             print(f"生成描述: {description}")
             return description
             

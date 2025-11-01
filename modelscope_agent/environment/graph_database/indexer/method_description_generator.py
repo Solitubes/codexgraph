@@ -76,8 +76,7 @@ class MethodDescriptionGenerator:
             'temperature': 0.3
         }
     
-    def generate_method_description(self, method_code: str, method_name: str, 
-                                  class_name: str = None, file_path: str = None) -> str:
+    def generate_method_description(self, method_code: str, method_name: str, class_name: str = None, file_path: str = None, relations: dict = None) -> str:
         """
         为方法生成描述
         
@@ -102,7 +101,7 @@ class MethodDescriptionGenerator:
             
             try:
                 # 构建提示词
-                prompt = self._build_prompt(method_code, method_name, class_name, file_path)
+                prompt = self._build_prompt(method_code, method_name, class_name, file_path, relations)
                 
                 # 调用大模型生成描述
                 description = self._call_llm(prompt)
@@ -126,7 +125,7 @@ class MethodDescriptionGenerator:
             return f"方法 {method_name} 描述生成器错误: {str(e)}"
     
     def _build_prompt(self, method_code: str, method_name: str, 
-                     class_name: str = None, file_path: str = None) -> str:
+                     class_name: str = None, file_path: str = None, relations: dict = None) -> str:
         """构建大模型提示词"""
         
         context_info = ""
@@ -134,24 +133,22 @@ class MethodDescriptionGenerator:
             context_info += f"所属类: {class_name}\n"
         if file_path:
             context_info += f"文件路径: {file_path}\n"
+        # 新增关系说明
+        if relations:
+            in_calls = relations.get('incoming_calls', [])
+            out_calls = relations.get('outgoing_calls', [])
+            inherited = relations.get('inherits_from', [])
+            subed = relations.get('inherited_by', [])
+            if in_calls:
+                context_info += f"被以下方法调用: {', '.join(in_calls)[:200]}\n"
+            if out_calls:
+                context_info += f"调用了以下方法: {', '.join(out_calls)[:200]}\n"
+            if inherited:
+                context_info += f"继承自: {', '.join(inherited)[:100]}\n"
+            if subed:
+                context_info += f"被以下类继承: {', '.join(subed)[:100]}\n"
         
-        prompt = f"""请分析以下Python方法，用简洁的中文描述它的作用和功能：
-
-{context_info}方法名: {method_name}
-方法代码:
-```python
-{method_code}
-```
-
-请用一句话概括这个方法的主要作用，要求：
-1. 简洁明了，不超过50个字
-2. 重点说明方法的核心功能
-3. 如果方法有参数，简要说明参数的作用
-4. 如果方法有返回值，说明返回什么
-
-描述格式：该方法用于[主要功能]，[参数说明]，[返回值说明]（如果有的话）
-
-描述:"""
+        prompt = f"""请分析以下Python方法及其结构关系，用简洁的中文描述它的作用、功能及关键关系：\n\n{context_info}方法名: {method_name}\n方法代码:\n```python\n{method_code}\n```\n请用一句话概括该方法的主要作用，并指出其与其它方法/类的重要关系（若有）：\n描述："""
         
         return prompt
     
